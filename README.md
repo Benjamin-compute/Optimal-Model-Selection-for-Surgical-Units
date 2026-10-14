@@ -1,25 +1,51 @@
-# Surgical-Unit (using R)
+# Optimal Model Selection for Surgical Units (R)
 
-A hospital surgery unit was interested in predicting survival in patients undergoing a particular type of liver operation. A random selection of 108 patients was available for analysis. For each patient record, the following information was extracted from the pre-operation evaluation:
+The goal of this project is to select the best model through the Modeling-Building Process, predict survival time (in days) after a particular type of liver operation from pre-operative measurements, and choose the best linear regression model.
 
-      blood:    Blood clotting score
+## Data
 
-      prog:     Prognostic index
+A hospital surgery unit wanted to predict survival in patients undergoing a particular liver operation. A random sample of 108 patients was available; this analysis uses the first 54.
 
-      enzyme:   Enzyme function test score
+Source: [add the source of the dataset here, e.g., textbook or course name]
 
-      liver:    Liver function test score
+| Variable | Description |
+|---|---|
+| `blood` | Blood clotting score |
+| `prog` | Prognostic index |
+| `enzyme` | Enzyme function test score |
+| `liver` | Liver function test score |
+| `age` | Age in years |
+| `gender` | 1 = female, 0 = male |
+| `a.mod` | 1 = moderate alcohol use, 0 = otherwise |
+| `a.heavy` | 1 = heavy alcohol use, 0 = otherwise |
+| `survival` | Survival time after surgery (days), the response |
 
-      age:      Age in years
+## Methods
 
-      gender:   I(person is female) i.e. 0 = male, 1=female
+1. **Full model and diagnostics.** Fit a linear model of survival on all eight predictors. Checked linearity, normality, and constant variance with residual and Q-Q plots (`ggResidpanel`). The constant variance assumption was violated.
+2. **Transformation.** A Box-Cox analysis (`lindia`) gave lambda = 0.1 (95% CI: -0.1 to 0.3). Because the interval includes 0, I used the log transformation (ln of survival), which is easier to interpret. After refitting, the residual variance was more constant and the main outliers in the Q-Q plot were gone.
+3. **Model selection.** Two approaches on the transformed response:
+   - *Best subset search* (`leaps`): all 256 possible models were searched. Adjusted R-squared rose quickly up to four predictors and then flattened at about 0.82. It was highest at six predictors.
+   - *Backward elimination by AIC* (`step`): dropped `liver`, then `a.mod`, and stopped at six predictors (AIC = -163.86).
+4. **Final-model check.** Variance inflation factors for the selected model were all below 1.12, so there was no sign of multicollinearity.
 
-      a.mod:    I(person is a moderate alcohol user) i.e. 0=none, 1 = moderate, 0 = heavy
+## Result
 
-      a.heavy:  I(person is a heavy alcohol user) i.e. 0=none, 0=moderate, 1=heavy
+Both methods chose the same model:
 
-A follow-up study ascertained the response variable -"survival time", which refers to the amount of time the person survived after the surgery.
+`ln(survival) ~ blood + prog + enzyme + age + gender + a.heavy`
 
-The dataset available for this analysis is for the first 54 patients.
+## Limitations
 
-The GOAL of this project is to select the best model through the Modeling Building Process.
+- Small sample (54 patients).
+- Model selection and fit used the same data, with no hold-out set or cross-validation, so fit statistics are likely optimistic.
+- Adjusted R-squared and AIC are both in-sample criteria.
+
+## Files
+
+- `Code_ Surgical Unit.Rmd`: R Markdown source
+- `PDF_Surgical Unit -Optimal Model Selection (2).pdf`: rendered output
+
+## Packages
+
+`tidyverse`, `cowplot`, `ggResidpanel`, `lindia`, `leaps`, `car`

@@ -6,7 +6,7 @@ The goal of this project is to select the best model through the Modeling-Buildi
 
 A hospital surgery unit wanted to predict survival in patients undergoing a particular liver operation. A random sample of 108 patients was available; this analysis uses the first 54.
 
-Source: [Applied Statistical Model (5th Edition) ISBN number is 978-0072386882]
+Source: (Textbook) Applied Linear Statistical Models (5th Edition) by Kutner, Nachtsheim, Neter, and Li.
 
 | Variable | Description |
 |---|---|

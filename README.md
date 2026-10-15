@@ -48,4 +48,4 @@ Both methods chose the same model:
 
 ## Packages
 
-`tidyverse`, `cowplot`, `ggResidpanel`, `lindia`, `leaps`, `car`
+`tidyverse`, `dplyr`, `ggplot2`, `cowplot`, `ggResidpanel`, `lindia`, `leaps`, `car`

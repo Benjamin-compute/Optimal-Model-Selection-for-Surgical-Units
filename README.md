@@ -1,6 +1,6 @@
-# Optimal Model for Post-Surgery Patient Survival (R)
+# Optimal Model for Post-Surgery Patient Survival (using R)
 
-The goal of this project is to select the best model through the Modeling-Building Process, predict survival time (in days) after a particular type of liver operation from pre-operative measurements, and choose the best linear regression model.
+This project aims to select the optimal model, through a model-building process, that will best predict survival time (in days) after a specific liver operation from pre-operative measurements, and to choose the best linear regression model.
 
 ## Data
 

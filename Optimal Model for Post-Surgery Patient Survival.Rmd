@@ -1,0 +1,255 @@
+---
+title: "Optimal Model for Post-Surgery Patient Survival"
+# author: "Benjamin Okisamen"
+# date: "2026-10-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages 
+
+
+```{r, warning = FALSE, message= FALSE}
+
+library(dplyr)
+library(tidyverse)
+library(cowplot)
+library(ggplot2)
+library(scales)  # help reduce output to specified decimal places
+library(ggResidpanel)
+```
+
+
+## Read the Dataset
+```{r}
+surgery <- read.csv(file.choose())
+
+``` 
+
+
+```{r}
+head(surgery)
+```
+
+## Part 1: Fit the linear model
+```{r}
+fit.surgery <- lm(survival ~ ., data = surgery)
+
+fit.surgery
+```
+
+## Part 2: Model Diagnostics 1
+### Check for Linearity, Normality and Constant Variance
+* Linearity & Constant Variance -use Residual plot
+* Normality -use Q-Q Plot
+
+```{r}
+plot1 <- resid_panel(fit.surgery, plots = c('resid', 'qq'))
+
+plot1
+
+```
+
+### Results 2.1
+* The **Linearity Assumption was not violated:** The residuals on the *Residual Plot* are not so far away from zero, by standardization, since majority of our values are between 2 and -2; then we are convinced there is a linear relationship between the predictors and the response variable.
+
+* The **Normality assumption was not violated:** Most points follow the *Q-Q line*, with one clear outlier.
+
+* The **Constant Variance assumption was violated:** From the *Residual Plot*, the residual spread is uneven across the predicted values (x-axis), and the large outliers makes it worse. **To fix this (unequal variance): transform the Y (response variable). **Note, this would also serve if normality is violated. We only transform X (i.e. predictor) when "linearity" is violated
+
+## Part 3A: Transform Y (response) using Box-Cox Transformation
+
+
+```{r, warning = FALSE, message= FALSE}
+
+library(lindia)
+
+gg_boxcox(fit.surgery) + 
+  theme_bw() + 
+  theme(plot.title = element_text(face = "bold")) +
+  scale_y_continuous(labels = label_number(accuracy = 0.1))  + # Y-axis to 1 dp
+  scale_x_continuous(labels = label_number(accuracy = 0.1))   # X-axis to 1 dp
+
+```
+
+
+### Results 3.1
+* The lambda value is $ ~0.1$ with a $95\%$ confidence interval of approximately $-0.1$ and $0.3$. It makes more sense to take $\lambda = 0.0$ for better interpretation in practice.
+* Since, $\lambda = 0$, that means our transformation becomes ** $ \ln(Y) $** because:
+$$
+T(Y) = 
+\begin{cases} 
+\frac{Y^\lambda - 1}{\lambda} & \text{if } \lambda \neq 0 \\ 
+\ln(Y) & \text{if } \lambda = 0 
+\end{cases}
+$$
+
+
+
+## Part 3B: Implement the Transformation of Y (response variable) in the dataset
+```{r}
+surgery <- mutate(surgery, ln.survival = log(survival))
+
+# check the new column
+head(surgery)
+```
+
+## Part 4: Data Cleaning -remove the original response variable
+
+```{r}
+surgery <- surgery %>% select(-survival)
+
+# check to confirm
+head(surgery)
+
+```
+
+## Part 5: Re-fit the model using the transformed Y
+```{r}
+# use the new response variable to fit the model
+
+fit2.surgery <- lm(ln.survival ~., surgery)
+fit2.surgery
+
+```
+## Part 6: Model Diagnostics 2
+#### Re-check for Linearity, Normality and Constant Variance
+
+```{r}
+plot2 <- resid_panel(fit2.surgery, plots = c('resid', 'qq'))
+
+plot2
+
+```
+
+### Results 6.1
+* With this transformation, we see from the *Residual Plot* that the residual spread is even across the predicted values (x-axis), and there are no more outliers on the *Q-Q plots*.
+
+
+## Part 7: BEST MODEL SELECTION
+### Using "Best Subset Algorithm" Method
+
+For context on this algorithm:
+
+  * The possible number of models based on our dataset is $2^{(p-1)} = 2^8 = 256$.
+
+  * Where $p =9,$ is the number of parameters (coefficients) in the full model, so, $p-1 = 8$ (intercept excluded)
+
+  * As $p$ increases, so does the multiple-coefficient-of-determination, $R^2$ thus, we should not pick the model with the largest $R^2$.
+
+  * We need the model with the least $R^2$.
+
+  * **GOAL:** Get a leveling off point where adding more variables provides little increase in $R^2$.
+
+```{r}
+library(leaps)
+
+select_model <- regsubsets(ln.survival ~ .,
+                           data = surgery)
+
+
+search.models = summary(select_model)
+search.models
+
+```
+### Results 7.1
+* From the established _256 possible models_, the 8 models above are the best model with $n$ predictors.
+* For example, the _best model with 3 predictor variables has "prog", "enzyme" and "a.heavy"_
+
+
+### Which is the best model to use?
+* Since $R^2$ will only increase as number of predictors increase, we would expect the model with all 8 parameters to have the highest $R^2$ and model with just "prog" to have the least.
+* For this reason, we use the **adjusted R-squared** approach. This adjust more parameters to the regression model.
+* Hence, we want the *model with the highest value of adjusted R-square*
+
+```{r}
+tibble(predictors = seq(1, 8),
+       y = search.models$adjr2) %>%
+                                    ggplot(aes(x = predictors, y = y)) +
+                                    geom_point() +
+                                    geom_line() + 
+                                    labs(x = "Number of Variables", y = "Adjusted R-square", 
+                                         title = "Best Model by Adj. R-square") +
+                                    # theme(plot.title = element_text(face = "bold")) +
+                                    theme_bw()
+```
+
+
+#### Check the number of variables that has the highest _adjusted R-Square_ in the graph
+```{r}
+which.max(search.models$adjr2)
+
+```
+
+
+### Results 7.2
+* **Best Model = model with 6 predictors**
+* Thus, our best model, by _Best Subset Algorithm_ will have the following predictors: $blood, \ prog, \ enzyme, \ age, \ gender, \ a.heavy$
+
+
+## Part 8: Refit the data into a new model 
+* Using only the relevant 6 predictors
+
+```{r}
+best_model = lm(formula = ln.survival ~ blood + prog + enzyme + age + gender + a.heavy, data = surgery)
+
+best_model
+```
+## Observation and Next Steps
+Although, our predictor variables are less than 30 for this dataset, I would like to test another method called the **Stepwise Regression Method**.
+
+
+## Part 9: Stepwise Regression Method
+For context on this algorithm:
+
+  * When the number of variables is $30$ or more, then _best subset algorithm_ becomes computationally expensive.
+  * We will employ the **Backward Stepwise Search** (or simply backward elimination): 
+    * This elimination starts with the full model (all predictors) and then removes one variable at a time in the model. 
+    * It compares models using numerical criteria such as "AIC" (Akaike Information Criteria). The lower the better.
+  
+#### Using Backward Elimination
+
+```{r}
+backward_elim <- step(object    = fit2.surgery,
+                      direction = "backward")
+```
+
+### Result 9.1
+
+* The reduction stopped at 6 variables
+* This implies that our BEST model is with the following predictors: $blood, \ prognostic \ index \ (prog.), \ enzyme, \ age, \ gender, \ heavy \ alcohol \ user \ (a.heavy)$
+* **These predictors are the same the predictors we got when we used the Adjusted R-squared criteria.** Hence, the same _"best model."_
+
+## Part 10: Model Diagnostics 3
+#### Check for multicollinearity of our _"Best Model"_
+* Using the Variance Inflation Factor $$VIF_{i} = \frac{1}{1 - R_{i}^{2}}$$
+* \(VIF_{i}\): The Variance Inflation Factor for a specific independent variable \(X_{i}\).
+* \(R_{i}^{2}\): The coefficient of determination (R-squared value) obtained by regressing that specific independent variable \(X_{i}\), against all other independent variables in the model.
+
+
+* VIF is interpreted as:
+  * $VIF = 1$: The variable is _completely uncorrelated_ with other variables
+  * $1 \leq VIF \leq 5$: The variable is _moderately correlated_ with other variables
+  * $VIF > 5 \ or \ 10$: This is "severe multicollinearity". The coefficients for these variables may be poorly estimated, unstable, and difficult to interpret.
+
+
+```{r, warning = FALSE, message= FALSE}
+library(car)
+
+vif(best_model)
+
+
+```
+### Result 10.1
+There are **no significant multicollinearity** in our model's predictor variables. Hence, **a good model.**
+
+
+```{r}
+
+```
+
+
+

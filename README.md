@@ -1,4 +1,4 @@
-# Optimal Model Selection for Surgical Units (R)
+# Optimal Model for Post-Surgery Patient Survival (R)
 
 The goal of this project is to select the best model through the Modeling-Building Process, predict survival time (in days) after a particular type of liver operation from pre-operative measurements, and choose the best linear regression model.
 
@@ -23,7 +23,7 @@ Source: (Textbook) Applied Linear Statistical Models (5th Edition) by Kutner, Na
 ## Methods
 
 1. **Full model and diagnostics.** Fit a linear model of survival on all eight predictors. Checked linearity, normality, and constant variance with residual and Q-Q plots (`ggResidpanel`). The constant variance assumption was violated.
-2. **Transformation.** A Box-Cox analysis (`lindia`) gave lambda = 0.1 (95% CI: -0.1 to 0.3). Because the interval includes 0, I used the log transformation (ln of survival), which is easier to interpret. After refitting, the residual variance was more constant and the main outliers in the Q-Q plot were gone.
+2. **Transformation.** A Box-Cox analysis (`lindia`) gave lambda = 0.1 (95% CI: -0.1 to 0.3). Because the interval includes 0, I used the log transformation (ln of survival), which is easier to interpret. After refitting, the residual variance was more constant, and the main outliers in the Q-Q plot were handled.
 3. **Model selection.** Two approaches on the transformed response:
    - *Best subset search* (`leaps`): all 256 possible models were searched. Adjusted R-squared rose quickly up to four predictors and then flattened at about 0.82. It was highest at six predictors.
    - *Backward elimination by AIC* (`step`): dropped `liver`, then `a.mod`, and stopped at six predictors (AIC = -163.86).
@@ -43,8 +43,8 @@ Both methods chose the same model:
 
 ## Files
 
-- `Code_ Surgical Unit.Rmd`: R Markdown source
-- `PDF_Surgical Unit -Optimal Model Selection (2).pdf`: rendered output
+- `Optimal Model for Post-Surgery Patient Survival.Rmd`: R Markdown source
+- `Optimal Model for Post-Surgery Patient Survival.pdf`: rendered output
 
 ## Packages
 
